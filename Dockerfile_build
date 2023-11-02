@@ -10,10 +10,26 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -q && apt-get install -y \
     ghostscript \
     software-properties-common \
+    lsb-release \
+    gnupg \
+    curl \
     python3-tk
 RUN add-apt-repository universe --yes --update && apt-get install -y \
     shc \
     gcc &\
+    rm -rf /var/lib/apt/lists/*
+
+#INSTALL CLOUDFLARED
+# Cloudflare GPG-Key hinzufügen
+RUN mkdir -p --mode=0755 /usr/share/keyrings && \
+    curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | gpg --dearmor | tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+
+RUN CODENAME=$(lsb_release -cs) && \
+    echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared $CODENAME main" | tee /etc/apt/sources.list.d/cloudflared.list
+    
+# Cloudflared installieren
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends cloudflared && \
     rm -rf /var/lib/apt/lists/*
 
 COPY ./scripts/docker-entrypoint.sh /
