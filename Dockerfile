@@ -1,1 +1,1 @@
-FROM ghcr.io/tna76874/schoolnotebook:latest
+FROM ghcr.io/tna76874/schoolnotebookbase:latest
