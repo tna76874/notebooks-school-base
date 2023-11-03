@@ -13,11 +13,20 @@ RUN apt-get update -q && apt-get install -y \
     lsb-release \
     gnupg \
     curl \
+    wget \
     python3-tk
 RUN add-apt-repository universe --yes --update && apt-get install -y \
     shc \
     gcc &\
     rm -rf /var/lib/apt/lists/*
+
+# Setze die Variable für die gcm Version
+ARG GCM_VERSION='2.3.2'
+
+# Lade das Debian-Paket herunter
+RUN wget https://github.com/git-ecosystem/git-credential-manager/releases/download/v${GCM_VERSION}/gcm-linux_amd64.${GCM_VERSION}.deb && \
+    dpkg -i gcm-linux_amd64.${GCM_VERSION}.deb && \
+    rm gcm-linux_amd64.${GCM_VERSION}.deb
 
 #INSTALL CLOUDFLARED
 # Cloudflare GPG-Key hinzufügen
@@ -27,7 +36,7 @@ RUN mkdir -p --mode=0755 /usr/share/keyrings && \
 RUN CODENAME=$(lsb_release -cs) && \
     echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared $CODENAME main" | tee /etc/apt/sources.list.d/cloudflared.list
     
-# Cloudflared installieren
+# cloudflared installieren
 RUN apt-get update && \
     apt-get install -y --no-install-recommends cloudflared && \
     rm -rf /var/lib/apt/lists/*
@@ -52,5 +61,18 @@ RUN pip install --no-cache-dir -r requirements.txt &&\
     rm -rf requirements.txt
 
 RUN rm -rf ${HOME}/work
+
+# set up git env
+
+RUN echo 'export GIT_AUTHOR_NAME="$(whoami)@$(hostname)"' \
+    >> /home/${NB_USER}/.bashrc && \
+    echo 'export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"' \
+    >> /home/${NB_USER}/.bashrc && \
+    echo 'export GIT_AUTHOR_EMAIL="$GIT_AUTHOR_NAME"' \
+    >> /home/${NB_USER}/.bashrc && \
+    echo 'export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_NAME"' \
+    >> /home/${NB_USER}/.bashrc  && \
+    echo 'git config --global credential.helper cache' \
+    >> /home/${NB_USER}/.bashrc
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
