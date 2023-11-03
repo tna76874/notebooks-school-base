@@ -42,6 +42,9 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY ./scripts/docker-entrypoint.sh /
+COPY ./scripts/tunnel /usr/local/bin/
+COPY ./modules /modules
+RUN chmod 775 /usr/local/bin/tunnel
 
 ARG NB_USER=jovyan
 ARG NB_UID=1000
@@ -50,6 +53,10 @@ ENV NB_UID ${NB_UID}
 ENV HOME /home/${NB_USER}
 
 RUN chmod 775 /docker-entrypoint.sh
+COPY ./notebooks/settings.ipynb ${HOME}/settings.ipynb
+RUN chown ${NB_USER} ${HOME}/settings.ipynb &&\
+    chmod 775 ${HOME}/settings.ipynb &&\
+    chown -R ${NB_USER} /modules
 
 USER ${NB_USER}
 
@@ -58,9 +65,12 @@ COPY ./requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt &&\
     jupyter contrib nbextension install --user &&\
     jupyter nbextension enable varInspector/main && \
-    rm -rf requirements.txt
+    rm -rf requirements.txt &&\
+    pip install /modules
 
 RUN rm -rf ${HOME}/work
+
+
 
 # set up git env
 
