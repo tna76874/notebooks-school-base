@@ -12,4 +12,4 @@ services:
       --NotebookApp.default_url=/lab/ \
       --ip=0.0.0.0 \
       --port=8888 \
-      --NotebookApp.token=''"
+      --NotebookApp.token='test'"

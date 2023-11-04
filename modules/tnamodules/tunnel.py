@@ -13,6 +13,30 @@ import signal
 import psutil
 import socket
 
+class JupyterTokenParser:
+    def __init__(self):
+        self.token_pattern = re.compile(r'http://[0-9\.]+:\d+/\?token=([a-zA-Z0-9]+)')
+
+    def get_jupyter_token(self):
+        try:
+            # Shell-Kommando ausführen und Ergebnis abrufen
+            result = subprocess.run(["jupyter", "notebook", "list"], capture_output=True, text=True)
+            output_string = result.stdout
+
+            # Suche nach dem Token im String
+            match = self.token_pattern.search(output_string)
+
+            if match:
+                # Extrahiere den Token aus dem Match-Objekt
+                token = match.group(1)
+                return token
+            else:
+                print("Token nicht gefunden.")
+                return None
+        except Exception as e:
+            print(f"Fehler beim Abrufen des Tokens: {e}")
+            return None
+
 class QRCodePrinter:
     def __init__(self, url, version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4):
         self.url = url
@@ -86,13 +110,18 @@ class CloudflaredTunnelManager:
         self.http = SimpleHTTPServer(port=self.port)
         
         self.exe = 'tunnel'
+        
+        self.srv = None
 
     def check_srv(self):
         if not os.path.exists(self.file_path):
             return []   
         with open(self.file_path, "r") as file:
             text = file.read()
-        return re.findall(r"https?://(?:\S+?\.)?trycloudflare\.com\S*", text)
+        srv = re.findall(r"https?://(?:\S+?\.)?trycloudflare\.com\S*", text)
+        if srv:
+            self.srv = srv[0]
+        return srv
 
     def show_qr(self,srv):
         QRCodePrinter(srv[0])
@@ -100,21 +129,41 @@ class CloudflaredTunnelManager:
     def stop_tunnel(self):
         for i in range(2):  os.system(f'{self.exe} -k')
 
-    def start_tunnel(self):
+    def start_tunnel(self, show=True):
         srv = self.check_srv()
-        if not srv:
-            self.stop_tunnel()
-            time.sleep(4)
-            os.system(f'{self.exe} -p {self.port}')
-            time.sleep(4)
-            srv = self.check_srv()
+    
+        for _ in range(3):
+            if srv:
+                break
+        
+            if not srv:
+                self.stop_tunnel()
+                time.sleep(4)
+                os.system(f'{self.exe} -p {self.port}')
+                time.sleep(4)
+                srv = self.check_srv()
 
-        if not srv:
-            print('Error: No tunnel started')
+        if show:
+            if not srv:
+                print('Error: No tunnel started')
+    
+            else:
+                print(f'Tunnel started on {"; ".join(srv)}')
+                self.show_qr(srv)
 
+class JupyterTunnel(CloudflaredTunnelManager):
+    def __init__(self, file_path='/tmp/srv.txt', port=8888):
+        # Rufe den __init__ der Elternklasse auf
+        super().__init__(file_path=file_path, port=port)
+        
+        self.start_tunnel(show=False)
+        if not isinstance(self.srv,type(None)):
+            token = JupyterTokenParser().get_jupyter_token()
+            url = f'{self.srv}/?token={token}'
+            QRCodePrinter(url)
+            print(f'Jupyter Server share: {url}')
         else:
-            print(f'Tunnel started on {"; ".join(srv)}')
-            self.show_qr(srv)
+            print('Error starting tunnel')
 
 
 if __name__ == '__main__':
