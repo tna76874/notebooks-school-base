@@ -1,16 +1,66 @@
 #!/bin/bash
 
 TMP_FILE="/tmp/srv.txt"
+PID_FILE="${TMP_FILE}.pid"
 
-while getopts ":p:k" opt; do
+extract_domain() {
+  if [ -e "$TMP_FILE" ]; then
+    local domain_line=$(grep -oEm 1 'https://[^[:space:]]+trycloudflare\.com' "$TMP_FILE")
+    echo "$domain_line"
+  else
+    echo ""
+  fi
+}
+
+check_process_running() {
+  local pid
+  if [ -e "$1" ]; then
+    pid=$(cat "$1")
+    if [ -n "$pid" ]; then
+      kill -0 $pid > /dev/null 2>&1
+      return $?
+    else
+      return 1
+    fi
+  else
+    return 1
+  fi
+}
+
+cat_tunnel() {
+  if check_process_running "${PID_FILE}"; then
+    cat ${TMP_FILE}
+  else
+    cleanup
+  fi
+}
+
+check_tunnel_running() {
+  if check_process_running "${PID_FILE}"; then
+    extract_domain
+  else
+    echo ""
+    cleanup
+  fi
+}
+
+cleanup() {
+  rm -rf ${TMP_FILE} ${PID_FILE}
+}
+
+while getopts ":p:ke" opt; do
   case ${opt} in
     p)
-      PORT=
       nohup cloudflared tunnel --url http://localhost:${OPTARG} > ${TMP_FILE} 2>&1 &
+      echo $! > "${PID_FILE}"
       ;;
     k)
       pkill cloudflared
-      rm -rf ${TMP_FILE}
+      cleanup
+      exit 0
+      ;;
+    e)
+      cat_tunnel
       exit 0
       ;;
     \?)
@@ -23,3 +73,5 @@ while getopts ":p:k" opt; do
       ;;
   esac
 done
+
+check_tunnel_running

@@ -115,16 +115,21 @@ class CloudflaredTunnelManager:
 
     def check_srv(self):
         if not os.path.exists(self.file_path):
-            return []   
-        with open(self.file_path, "r") as file:
-            text = file.read()
-        srv = re.findall(r"https?://(?:\S+?\.)?trycloudflare\.com\S*", text)
-        if srv:
-            self.srv = srv[0]
+            return ''  
+            
+        srv=subprocess.run('tunnel', capture_output=True, text=True).stdout.splitlines()
+        if len(srv)==0:
+            srv=''
+        else:
+            srv=srv[0]
+        
+        if srv!='':
+            self.srv=srv
+            
         return srv
 
     def show_qr(self,srv):
-        QRCodePrinter(srv[0])
+        QRCodePrinter(srv)
         
     def stop_tunnel(self):
         for i in range(2):  os.system(f'{self.exe} -k')
@@ -133,22 +138,20 @@ class CloudflaredTunnelManager:
         srv = self.check_srv()
     
         for _ in range(3):
-            if srv:
+            if srv!='':
                 break
         
-            if not srv:
-                self.stop_tunnel()
-                time.sleep(4)
+            if srv=='':
                 os.system(f'{self.exe} -p {self.port}')
-                time.sleep(4)
+                time.sleep(6)
                 srv = self.check_srv()
 
         if show:
-            if not srv:
+            if srv=='':
                 print('Error: No tunnel started')
     
             else:
-                print(f'Tunnel started on {"; ".join(srv)}')
+                print(f'Tunnel started on {srv}')
                 self.show_qr(srv)
 
 class JupyterTunnel(CloudflaredTunnelManager):
