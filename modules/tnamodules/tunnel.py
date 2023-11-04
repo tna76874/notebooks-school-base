@@ -13,6 +13,28 @@ import signal
 import psutil
 import socket
 
+class QRCodePrinter:
+    def __init__(self, url, version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4):
+        self.url = url
+        self.version = version
+        self.error_correction = error_correction
+        self.box_size = box_size
+        self.border = border
+        self.show_qr()
+
+    def show_qr(self):
+        qr = qrcode.QRCode(
+            version=self.version,
+            error_correction=self.error_correction,
+            box_size=self.box_size,
+            border=self.border,
+        )
+        qr.add_data(self.url)
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white")
+        display(img)
+
 
 class SimpleHTTPServer:
     def __init__(self, port=8080):
@@ -48,11 +70,14 @@ class SimpleHTTPServer:
             print("Error starting webserver.")
 
     def stop(self):
-        for process in psutil.process_iter(['pid', 'name']):
-            if process.info['name'] == 'http.server':
+        for process in psutil.process_iter(['pid', 'name', 'cmdline']):
+            cmdline = process.info['cmdline']
+            if cmdline and 'http.server' in " ".join(cmdline):
                 pid = process.info['pid']
-                os.kill(pid, signal.SIGTERM)
-        self.process = None
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                    self.process = None
+                except: pass
 
 class CloudflaredTunnelManager:
     def __init__(self, file_path='/tmp/srv.txt', port=8080):
@@ -70,17 +95,7 @@ class CloudflaredTunnelManager:
         return re.findall(r"https?://(?:\S+?\.)?trycloudflare\.com\S*", text)
 
     def show_qr(self,srv):
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
-            border=4,
-        )
-        qr.add_data(srv[0])
-        qr.make(fit=True)
-
-        img = qr.make_image(fill_color="black", back_color="white")
-        display(img)
+        QRCodePrinter(srv[0])
         
     def stop_tunnel(self):
         for i in range(2):  os.system(f'{self.exe} -k')
@@ -104,4 +119,4 @@ class CloudflaredTunnelManager:
 
 if __name__ == '__main__':
     tunnel_manager = CloudflaredTunnelManager()
-    tunnel_manager.start_tunnel()
+    # tunnel_manager.start_tunnel()
