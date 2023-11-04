@@ -59,6 +59,8 @@ class CloudflaredTunnelManager:
         self.file_path = file_path
         self.port = port
         self.http = SimpleHTTPServer(port=self.port)
+        
+        self.exe = 'tunnel'
 
     def check_srv(self):
         if not os.path.exists(self.file_path):
@@ -81,14 +83,14 @@ class CloudflaredTunnelManager:
         display(img)
         
     def stop_tunnel(self):
-        for i in range(2):  os.system(f'tunnel.x -k')
+        for i in range(2):  os.system(f'{self.exe} -k')
 
     def start_tunnel(self):
         srv = self.check_srv()
         if not srv:
             self.stop_tunnel()
             time.sleep(4)
-            os.system(f'tunnel.x -p {self.port}')
+            os.system(f'{self.exe} -p {self.port}')
             time.sleep(4)
             srv = self.check_srv()
 
