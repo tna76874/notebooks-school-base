@@ -1,4 +1,25 @@
 #!/bin/bash
-PORT=${1:-8080}
 
-nohup cloudflared tunnel --url http://localhost:$PORT > /tmp/srv.txt 2>&1 &
+TMP_FILE="/tmp/srv.txt"
+
+while getopts ":p:k" opt; do
+  case ${opt} in
+    p)
+      PORT=
+      nohup cloudflared tunnel --url http://localhost:${OPTARG} > ${TMP_FILE} 2>&1 &
+      ;;
+    k)
+      pkill cloudflared
+      rm -rf ${TMP_FILE}
+      exit 0
+      ;;
+    \?)
+      echo "Ungültige Option: -$OPTARG" >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG erfordert ein Argument." >&2
+      exit 1
+      ;;
+  esac
+done

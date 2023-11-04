@@ -10,6 +10,9 @@ import qrcode
 from IPython.display import display, Image
 import subprocess
 import signal
+import psutil
+import socket
+
 
 class SimpleHTTPServer:
     def __init__(self, port=8080):
@@ -17,34 +20,39 @@ class SimpleHTTPServer:
         self.process = None
         self.home_directory = os.path.join(os.path.expanduser("~"), "http")
 
+    def is_port_in_use(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            return s.connect_ex(('localhost', self.port)) == 0
 
     def start(self):
-        # Erstelle das Home-Verzeichnis, wenn es nicht existiert
-        if not os.path.exists(self.home_directory):
-            os.makedirs(self.home_directory)
-
-        # Wechsle zum Home-Verzeichnis
-        os.chdir(self.home_directory)
-        
-        # Baue den Befehl zusammen
-        command = f"python -m http.server {self.port}"
-
-        # Starte den Server im Hintergrund und erhalte die PID
-        self.process = subprocess.Popen(command, shell=True)
-
-        # Speichere die PID in einer Datei
-        with open("/tmp/server.pid", "w") as pid_file:
-            pid_file.write(str(self.process.pid))
+        try:
+            # Überprüfe, ob der Port bereits in Verwendung ist
+            if self.is_port_in_use():
+                print(f"Port {self.port} is already in use.")
+                return
+            
+            # Erstelle das Home-Verzeichnis, wenn es nicht existiert
+            if not os.path.exists(self.home_directory):
+                os.makedirs(self.home_directory)
+            
+            # Baue den Befehl zusammen
+            command = f"python -m http.server {self.port} --directory {self.home_directory}"
+    
+            # Starte den Server im Hintergrund und erhalte die PID
+            self.process = subprocess.Popen(command, shell=True)
+    
+            # Speichere die PID in einer Datei
+            with open("/tmp/server.pid", "w") as pid_file:
+                pid_file.write(str(self.process.pid))
+        except:
+            print("Error starting webserver.")
 
     def stop(self):
-        if self.process:
-            # Lese die PID aus der Datei
-            with open("/tmp/server.pid", "r") as pid_file:
-                pid = int(pid_file.read().strip())
-
-            # Beende den Prozess
-            os.kill(pid, signal.SIGTERM)
-            self.process = None
+        for process in psutil.process_iter(['pid', 'name']):
+            if process.info['name'] == 'http.server':
+                pid = process.info['pid']
+                os.kill(pid, signal.SIGTERM)
+        self.process = None
 
 class CloudflaredTunnelManager:
     def __init__(self, file_path='/tmp/srv.txt', port=8080):
@@ -73,14 +81,14 @@ class CloudflaredTunnelManager:
         display(img)
         
     def stop_tunnel(self):
-        for i in range(2): os.system('pkill cloudflared')
+        for i in range(2):  os.system(f'tunnel.x -k')
 
     def start_tunnel(self):
         srv = self.check_srv()
         if not srv:
             self.stop_tunnel()
             time.sleep(4)
-            os.system(f'tunnel {self.port}')
+            os.system(f'tunnel.x -p {self.port}')
             time.sleep(4)
             srv = self.check_srv()
 
