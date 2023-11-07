@@ -16,6 +16,7 @@ RUN apt-get update -q && apt-get install -y \
     wget \
     screen \
     htop \
+    ncdu \
     python3-tk
 RUN add-apt-repository universe --yes --update && apt-get install -y \
     shc \
