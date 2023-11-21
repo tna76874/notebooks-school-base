@@ -17,7 +17,8 @@ RUN apt-get update -q && apt-get install -y \
     screen \
     htop \
     ncdu \
-    python3-tk
+    python3-tk \
+    inkscape
 RUN add-apt-repository universe --yes --update && apt-get install -y \
     shc \
     gcc &\
