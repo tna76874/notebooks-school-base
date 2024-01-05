@@ -13,6 +13,8 @@ import signal
 import psutil
 import socket
 
+from quickflare.quickflare import CloudflaredManager
+
 class JupyterTokenParser:
     def __init__(self):
         self.token_pattern = re.compile(r'http://[0-9\.]+:\d+/\?token=([a-zA-Z0-9]+)')
@@ -105,59 +107,39 @@ class SimpleHTTPServer:
 
 class CloudflaredTunnelManager:
     def __init__(self, file_path='/tmp/srv.txt', port=8080):
-        self.file_path = file_path
-        self.port = port
-        self.http = SimpleHTTPServer(port=self.port)
-        
-        self.exe = 'tunnel'
-        
+
+        self.cf = CloudflaredManager(port=port)
+
+        self.http = SimpleHTTPServer(port=port)
+
         self.srv = None
 
-    def check_srv(self):
-        if not os.path.exists(self.file_path):
-            return ''  
-            
-        srv=subprocess.run('tunnel', capture_output=True, text=True).stdout.splitlines()
-        if len(srv)==0:
-            srv=''
-        else:
-            srv=srv[0]
-        
-        if srv!='':
-            self.srv=srv
-            
-        return srv
-
-    def show_qr(self,srv):
-        QRCodePrinter(srv)
+    def show_qr(self):
+        QRCodePrinter(self.cf.tunnel_url)
         
     def stop_tunnel(self):
-        for i in range(2):  os.system(f'{self.exe} -k')
+        self.cf.stop()
 
     def start_tunnel(self, show=True):
-        srv = self.check_srv()
-    
-        for _ in range(3):
-            if srv!='':
-                break
-        
-            if srv=='':
-                os.system(f'{self.exe} -p {self.port}')
-                time.sleep(6)
-                srv = self.check_srv()
+        self.cf.start()
+        self.srv = self.cf.tunnel_url
+
 
         if show:
-            if srv=='':
+            if self.cf.tunnel_url=='':
                 print('Error: No tunnel started')
     
             else:
                 print(f'Tunnel started on {srv}')
-                self.show_qr(srv)
+                self.show_qr()
+
+    def __del__(self):
+        self.cf.__del__()
 
 class JupyterTunnel(CloudflaredTunnelManager):
-    def __init__(self, file_path='/tmp/srv.txt', port=8888):
+    def __init__(self, file_path='', port=8888):
         # Rufe den __init__ der Elternklasse auf
-        super().__init__(file_path=file_path, port=port)
+        super().__init__(port=port)
         
         self.start_tunnel(show=False)
         if not isinstance(self.srv,type(None)):

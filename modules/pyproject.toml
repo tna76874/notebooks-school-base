@@ -10,6 +10,9 @@ authors = [
 ]
 description = "Opening tcp tunnel"
 requires-python = ">=3.8"
+dependencies = [
+    "quickflare@git+https://github.com/tna76874/quickflare.git@74d4c005db25946c93db99233c49b9cfd3b96f1f",
+]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
