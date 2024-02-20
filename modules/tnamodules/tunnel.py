@@ -23,15 +23,9 @@ class JupyterTokenParser:
         try:
             # Shell-Kommando ausführen und Ergebnis abrufen
             result = subprocess.run(["jupyter", "notebook", "list"], capture_output=True, text=True)
-            output_string = result.stdout
-
-            # Suche nach dem Token im String
-            match = self.token_pattern.search(output_string)
-
-            if match:
-                # Extrahiere den Token aus dem Match-Objekt
-                token = match.group(1)
-                return token
+            token_list = re.findall(r'\?token=([^&\s]+)', result.stdout)
+            if len(token_list)==1:
+                return token_list[0]
             else:
                 print("Token nicht gefunden.")
                 return None
