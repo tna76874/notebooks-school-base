@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - stable
+      - dev
   pull_request:
     branches: [ "master" ]
 
@@ -15,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: 'Login to GitHub Container Registry'
       uses: docker/login-action@v3
@@ -31,22 +32,32 @@ jobs:
           CURRENT_DATE_WITH_HOUR=$(date +'%Y%m%d%H')
           IMAGE_NAME="ghcr.io/tna76874/schoolnotebookbase"
 
-          # Build image for master branch
-          if [ ${{ github.ref }} == 'refs/heads/master' ]; then
+
+          # Set default channel
+          CHANNEL=""
+
+          # Determine channel based on branch
+          if [ "${{ github.ref }}" == 'refs/heads/master' ]; then
             CHANNEL="latest"
-          fi
-
-          # Build image for stable branch
-          if [ ${{ github.ref }} == 'refs/heads/stable' ]; then
+          elif [ "${{ github.ref }}" == 'refs/heads/stable' ]; then
             CHANNEL="stable"
-            docker build . --file Dockerfile_build --tag ${IMAGE_NAME}:${CHANNEL}-${CURRENT_DATE}
-            docker push ${IMAGE_NAME}:${CHANNEL}-${CURRENT_DATE}
-            docker build . --file Dockerfile_build --tag ${IMAGE_NAME}:${CHANNEL}-${CURRENT_DATE_WITH_HOUR}
-            docker push ${IMAGE_NAME}:${CHANNEL}-${CURRENT_DATE_WITH_HOUR}
+          elif [ "${{ github.ref }}" == 'refs/heads/dev' ]; then
+            CHANNEL="dev"
           fi
 
-          docker build . --file Dockerfile_build --tag ${IMAGE_NAME}:${COMMIT_HASH}
-          docker push ${IMAGE_NAME}:${COMMIT_HASH}
+          # Build and push image for all branches except feature branches
+          if [ -n "$CHANNEL" ]; then
+            docker build . --file Dockerfile_build --tag "${IMAGE_NAME}:${CHANNEL}-${CURRENT_DATE}" --tag "${IMAGE_NAME}:${CHANNEL}-${CURRENT_DATE_WITH_HOUR}"
+            docker push "${IMAGE_NAME}:${CHANNEL}-${CURRENT_DATE}"
+            docker push "${IMAGE_NAME}:${CHANNEL}-${CURRENT_DATE_WITH_HOUR}"
+          fi
 
-          docker build . --file Dockerfile_build --tag ${IMAGE_NAME}:${CHANNEL}
-          docker push ${IMAGE_NAME}:${CHANNEL}
+          # Build and push image for specific commit
+          docker build . --file Dockerfile_build --tag "${IMAGE_NAME}:${COMMIT_HASH}"
+          docker push "${IMAGE_NAME}:${COMMIT_HASH}"
+
+          # Build and push image for specific channel
+          if [ -n "$CHANNEL" ]; then
+            docker build . --file Dockerfile_build --tag "${IMAGE_NAME}:${CHANNEL}"
+            docker push "${IMAGE_NAME}:${CHANNEL}"
+          fi

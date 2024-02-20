@@ -1,4 +1,4 @@
-FROM jupyter/scipy-notebook:python-3.8.13
+FROM jupyter/scipy-notebook:python-3.11.6
 
 USER root
 
@@ -67,18 +67,17 @@ USER ${NB_USER}
 COPY ./requirements.txt . 
 
 RUN pip install --no-cache-dir -r requirements.txt &&\
-    jupyter contrib nbextension install --user &&\
-    jupyter nbextension enable varInspector/main && \
+    jupyter labextension disable "@jupyterlab/apputils-extension:announcements" &&\
     rm -rf requirements.txt
+
+RUN mkdir -p ${HOME}/.jupyter
+COPY ./jupyter_notebook_config.py ${HOME}/.jupyter
 
 RUN pip install /modules
 
 RUN rm -rf ${HOME}/work
 
-
-
 # set up git env
-
 RUN echo 'export GIT_AUTHOR_NAME="$(whoami)@$(hostname)"' \
     >> /home/${NB_USER}/.bashrc && \
     echo 'export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"' \
