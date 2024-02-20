@@ -16,12 +16,8 @@ import socket
 from quickflare.quickflare import CloudflaredManager
 
 class JupyterTokenParser:
-    def __init__(self):
-        self.token_pattern = re.compile(r'http://[0-9\.]+:\d+/\?token=([a-zA-Z0-9]+)')
-
     def get_jupyter_token(self):
         try:
-            # Shell-Kommando ausführen und Ergebnis abrufen
             result = subprocess.run(["jupyter", "notebook", "list"], capture_output=True, text=True)
             token_list = re.findall(r'\?token=([^&\s]+)', result.stdout)
             if len(token_list)==1:

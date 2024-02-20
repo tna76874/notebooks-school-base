@@ -56,11 +56,17 @@ ENV USER ${NB_USER}
 ENV NB_UID ${NB_UID}
 ENV HOME /home/${NB_USER}
 
+ARG CLOUDFLARED_DEB_URL=https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+
 RUN chmod 775 /docker-entrypoint.sh
 COPY ./notebooks/settings.ipynb ${HOME}/settings.ipynb
 RUN chown ${NB_USER} ${HOME}/settings.ipynb &&\
     chmod 775 ${HOME}/settings.ipynb &&\
     chown -R ${NB_USER} /modules
+
+RUN wget $CLOUDFLARED_DEB_URL -O /tmp/cloudflared.deb \
+    && dpkg -i /tmp/cloudflared.deb \
+    && rm /tmp/cloudflared.deb
 
 USER ${NB_USER}
 
