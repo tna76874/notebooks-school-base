@@ -48,7 +48,7 @@ RUN apt-get update && \
 COPY ./scripts/docker-entrypoint.sh /
 COPY ./scripts/tunnel /usr/local/bin/
 COPY ./modules /modules
-RUN chmod 775 /usr/local/bin/tunnel
+RUN /usr/bin/shc -S -f -r /usr/local/bin/tunnel; mv /usr/local/bin/tunnel.x /usr/local/bin/tunnel; chmod u+s /usr/local/bin/tunnel; chmod 775 /usr/local/bin/tunnel
 
 ARG NB_USER=jovyan
 ARG NB_UID=1000
