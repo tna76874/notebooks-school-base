@@ -69,6 +69,22 @@ RUN wget $CLOUDFLARED_DEB_URL -O /tmp/cloudflared.deb \
     && dpkg -i /tmp/cloudflared.deb \
     && rm /tmp/cloudflared.deb
 
+### LATEX
+RUN apt-get update && \
+    apt-get install -y \
+        texlive-xetex \
+        texlive-latex-recommended \
+        texlive-latex-extra \
+        texlive-fonts-recommended \
+        texlive-lang-german \
+        fonts-lmodern \
+        fonts-dejavu \
+        fonts-noto \
+        fontconfig && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+### LATEX
+
 USER ${NB_USER}
 
 COPY ./requirements.txt . 
